@@ -8,7 +8,7 @@ const cors = require("cors");
 const authRoutes = require("./routers/authRoutes.js");
 const areaRoutes = require("./routers/areaRoutes.js");
 const zoneRoutes = require("./routers/zoneRoutes.js");
-
+const packageRoutes = require("./routers/packageRoutes.js")
 dotenv.config();
 
 const app = express();
@@ -29,7 +29,7 @@ app.use(express.json());
 app.use(authRoutes);
 app.use(areaRoutes);
 app.use(zoneRoutes);
-
+app.use(packageRoutes)
 // 🔗 Root route
 app.get("/", (req, res) => {
   res.send("🌐 API is running");
