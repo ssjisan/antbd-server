@@ -9,6 +9,7 @@ const authRoutes = require("./routers/authRoutes.js");
 const areaRoutes = require("./routers/areaRoutes.js");
 const zoneRoutes = require("./routers/zoneRoutes.js");
 const packageRoutes = require("./routers/packageRoutes.js")
+const requestConnectionRoutes = require("./routers/requestConnectionRoutes.js")
 dotenv.config();
 
 const app = express();
@@ -30,6 +31,8 @@ app.use(authRoutes);
 app.use(areaRoutes);
 app.use(zoneRoutes);
 app.use(packageRoutes)
+app.use(requestConnectionRoutes)
+
 // 🔗 Root route
 app.get("/", (req, res) => {
   res.send("🌐 API is running");
