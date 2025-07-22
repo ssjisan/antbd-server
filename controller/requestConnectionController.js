@@ -1,6 +1,6 @@
 const Area = require("../model/areaModel.js");
+const ConnectionRequest = require("../model/requestConnectionModel.js");
 
-// Ray-casting algorithm to check if point is inside polygon
 function isPointInPolygon(point, vs) {
   const x = point[0],
     y = point[1];
@@ -28,7 +28,7 @@ const checkAvailability = async (req, res) => {
   }
 
   try {
-    const areas = await Area.find();
+    const areas = await Area.find().populate("zone"); // 🟢 Populate zone
 
     for (const area of areas) {
       for (const polygon of area.polygons) {
@@ -47,12 +47,15 @@ const checkAvailability = async (req, res) => {
             message: `Coverage available in ${area.areaName}`,
             areaId: area._id,
             areaName: area.areaName,
+            zoneName: area.zone?.name || "Unknown", // 🟢 Return zoneName
+            combinedAreaZone: `${area.areaName}, ${
+              area.zone?.name || "Unknown"
+            }`,
           });
         }
       }
     }
 
-    // If no polygon matched
     return res.status(404).json({
       success: false,
       message: "No coverage found in your area.",
@@ -66,4 +69,43 @@ const checkAvailability = async (req, res) => {
   }
 };
 
-module.exports = { checkAvailability };
+const createConnectionRequest = async (req, res) => {
+  try {
+    const {
+      name,
+      mobile,
+      email,
+      zone,
+      area,
+      fullAddress,
+      areaInfo,
+      packageId,
+    } = req.body;
+    console.log("Receiveing from front end",req.body);
+    
+    // Simple validation (you can extend it)
+    if (!name || !mobile || !zone || !area || !fullAddress || !packageId) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const newRequest = new ConnectionRequest({
+      name,
+      mobile,
+      email,
+      zone,
+      area,
+      fullAddress,
+      areaInfo,
+      packageId,
+    });
+
+    const savedRequest = await newRequest.save();
+
+    res.status(201).json(savedRequest);
+  } catch (error) {
+    console.error("Error creating connection request:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+module.exports = { checkAvailability, createConnectionRequest };
