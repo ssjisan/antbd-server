@@ -127,10 +127,14 @@ const changePassword = async (req, res) => {
       return res.status(400).json({ error: "Confirm password is required" });
     }
     if (newPassword.length < 6) {
-      return res.status(400).json({ error: "New password should be longer than 6 characters" });
+      return res
+        .status(400)
+        .json({ error: "New password should be longer than 6 characters" });
     }
     if (newPassword !== confirmPassword) {
-      return res.status(400).json({ error: "New password and confirm password do not match" });
+      return res
+        .status(400)
+        .json({ error: "New password and confirm password do not match" });
     }
 
     const existingUser = await UserModel.findById(req.user._id);
@@ -153,7 +157,7 @@ const changePassword = async (req, res) => {
 const resetPassword = async (req, res) => {
   try {
     const { userId } = req.params;
-    const hashedPassword = await hashPassword('123456');
+    const hashedPassword = await hashPassword("123456");
 
     const updatedUser = await UserModel.findByIdAndUpdate(
       userId,

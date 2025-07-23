@@ -81,8 +81,8 @@ const createConnectionRequest = async (req, res) => {
       areaInfo,
       packageId,
     } = req.body;
-    console.log("Receiveing from front end",req.body);
-    
+    console.log("Receiveing from front end", req.body);
+
     // Simple validation (you can extend it)
     if (!name || !mobile || !zone || !area || !fullAddress || !packageId) {
       return res.status(400).json({ error: "Missing required fields" });
@@ -108,4 +108,14 @@ const createConnectionRequest = async (req, res) => {
   }
 };
 
-module.exports = { checkAvailability, createConnectionRequest };
+const getAllConnectionRequests = async (req, res) => {
+  try {
+    const requests = await ConnectionRequest.find().sort({ createdAt: -1 }); // latest first
+    res.json(requests);
+  } catch (error) {
+    console.error("Error fetching connection requests:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+module.exports = { checkAvailability, createConnectionRequest,getAllConnectionRequests };

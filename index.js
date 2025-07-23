@@ -5,6 +5,7 @@ const morgan = require("morgan");
 const cors = require("cors");
 
 // Route Imports
+const webMessage = require ("./helper/webMessage.js")
 const authRoutes = require("./routers/authRoutes.js");
 const areaRoutes = require("./routers/areaRoutes.js");
 const zoneRoutes = require("./routers/zoneRoutes.js");
@@ -34,8 +35,9 @@ app.use(packageRoutes)
 app.use(requestConnectionRoutes)
 
 // 🔗 Root route
+// Basic Route
 app.get("/", (req, res) => {
-  res.send("🌐 API is running");
+  res.send(webMessage);
 });
 
 // 🚀 Start server
