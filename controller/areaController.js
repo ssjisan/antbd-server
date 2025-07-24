@@ -46,7 +46,8 @@ const createOrUpdateArea = async (req, res) => {
   try {
     const { areaName, zone, address, polygons, id } = req.body;
     const file = req.file;
-
+    console.log(req.body);
+    
     if (!areaName || !zone || !address || !polygons) {
       return res.status(400).json({
         error: "Area name, zone, address, and map polygons are required",
