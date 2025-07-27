@@ -5,12 +5,14 @@ const morgan = require("morgan");
 const cors = require("cors");
 
 // Route Imports
-const webMessage = require ("./helper/webMessage.js")
+const webMessage = require("./helper/webMessage.js");
 const authRoutes = require("./routers/authRoutes.js");
 const areaRoutes = require("./routers/areaRoutes.js");
 const zoneRoutes = require("./routers/zoneRoutes.js");
-const packageRoutes = require("./routers/packageRoutes.js")
-const requestConnectionRoutes = require("./routers/requestConnectionRoutes.js")
+const packageRoutes = require("./routers/packageRoutes.js");
+const requestConnectionRoutes = require("./routers/requestConnectionRoutes.js");
+const dashboardKpiRoutes = require("./routers/dashboardKpiRoutes.js");
+
 dotenv.config();
 
 const app = express();
@@ -31,8 +33,9 @@ app.use(express.json());
 app.use(authRoutes);
 app.use(areaRoutes);
 app.use(zoneRoutes);
-app.use(packageRoutes)
-app.use(requestConnectionRoutes)
+app.use(packageRoutes);
+app.use(requestConnectionRoutes);
+app.use(dashboardKpiRoutes);
 
 // 🔗 Root route
 // Basic Route

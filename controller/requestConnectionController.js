@@ -19,7 +19,8 @@ function isPointInPolygon(point, vs) {
 
 const checkAvailability = async (req, res) => {
   const { lat, lng } = req.body;
-
+  console.log(req.body);
+  
   if (typeof lat !== "number" || typeof lng !== "number") {
     return res.status(400).json({
       success: false,
