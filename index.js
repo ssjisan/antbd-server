@@ -12,7 +12,7 @@ const zoneRoutes = require("./routers/zoneRoutes.js");
 const packageRoutes = require("./routers/packageRoutes.js");
 const requestConnectionRoutes = require("./routers/requestConnectionRoutes.js");
 const dashboardKpiRoutes = require("./routers/dashboardKpiRoutes.js");
-
+const clientRoutes = require("./routers/clientRoutes.js");
 dotenv.config();
 
 const app = express();
@@ -36,7 +36,7 @@ app.use(zoneRoutes);
 app.use(packageRoutes);
 app.use(requestConnectionRoutes);
 app.use(dashboardKpiRoutes);
-
+app.use(clientRoutes);
 // 🔗 Root route
 // Basic Route
 app.get("/", (req, res) => {
