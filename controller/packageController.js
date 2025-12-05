@@ -112,7 +112,7 @@ const listPopUpPackages = async (req, res) => {
       createdAt: 1,
     });
 
-    res.status(200).json( packages );
+    res.status(200).json(packages);
   } catch (error) {
     console.error("Error fetching popup packages:", error);
     res.status(500).json({ error: "Internal server error" });

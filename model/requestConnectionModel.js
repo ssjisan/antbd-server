@@ -39,7 +39,7 @@ const requestConnectionSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "confirmed", "cancelled"],
+      enum: ["pending", "connected", "cancelled", "currently not possible"],
       default: "pending",
     },
     remarks: {

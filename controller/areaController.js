@@ -47,7 +47,7 @@ const createOrUpdateArea = async (req, res) => {
     const { areaName, zone, address, polygons, id } = req.body;
     const file = req.file;
     console.log(req.body);
-    
+
     if (!areaName || !zone || !address || !polygons) {
       return res.status(400).json({
         error: "Area name, zone, address, and map polygons are required",
@@ -108,11 +108,14 @@ const createOrUpdateArea = async (req, res) => {
   }
 };
 
-
 // List all areas
 const listAreas = async (req, res) => {
   try {
-    const areas = await Area.find().sort({ createdAt: 1 });
+    const { zoneId } = req.query;
+    let query = {};
+    if (zoneId) query.zone = zoneId;
+
+    const areas = await Area.find(query).sort({ createdAt: 1 });
     res.json(areas);
   } catch (err) {
     console.error("Area list error:", err);

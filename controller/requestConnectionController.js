@@ -1,5 +1,6 @@
 const Area = require("../model/areaModel.js");
 const ConnectionRequest = require("../model/requestConnectionModel.js");
+const mongoose = require("mongoose");
 
 function isPointInPolygon(point, vs) {
   const x = point[0],
@@ -20,35 +21,40 @@ function isPointInPolygon(point, vs) {
 const checkAvailability = async (req, res) => {
   const { lat, lng } = req.body;
   console.log(req.body);
-  
-  if (typeof lat !== "number" || typeof lng !== "number") {
+
+  const latitude = Number(lat);
+  const longitude = Number(lng);
+
+  if (isNaN(latitude) || isNaN(longitude)) {
     return res.status(400).json({
       success: false,
-      message: "Latitude and longitude are required and must be numbers.",
+      message: "Latitude and longitude must be valid numbers.",
     });
   }
 
   try {
-    const areas = await Area.find().populate("zone"); // 🟢 Populate zone
+    const areas = await Area.find().populate("zone");
 
     for (const area of areas) {
       for (const polygon of area.polygons) {
         let polygonCoords = polygon.coordinates.map(([lat, lng]) => [lng, lat]);
+
         const firstPoint = polygonCoords[0];
         const lastPoint = polygonCoords[polygonCoords.length - 1];
         if (firstPoint[0] !== lastPoint[0] || firstPoint[1] !== lastPoint[1]) {
           polygonCoords.push(firstPoint);
         }
 
-        const point = [lng, lat];
+        const point = [longitude, latitude];
         const inside = isPointInPolygon(point, polygonCoords);
+
         if (inside) {
           return res.json({
             success: true,
             message: `Coverage available in ${area.areaName}`,
             areaId: area._id,
             areaName: area.areaName,
-            zoneName: area.zone?.name || "Unknown", // 🟢 Return zoneName
+            zoneName: area.zone?.name || "Unknown",
             combinedAreaZone: `${area.areaName}, ${
               area.zone?.name || "Unknown"
             }`,
@@ -109,9 +115,59 @@ const createConnectionRequest = async (req, res) => {
   }
 };
 
+// const getAllConnectionRequests = async (req, res) => {
+//   try {
+//     const requests = await ConnectionRequest.find().sort({ createdAt: -1 }); // latest first
+//     res.json(requests);
+//   } catch (error) {
+//     console.error("Error fetching connection requests:", error);
+//     res.status(500).json({ success: false, message: "Server error" });
+//   }
+// };
+
+// Controller: getAllConnectionRequests
+
 const getAllConnectionRequests = async (req, res) => {
   try {
-    const requests = await ConnectionRequest.find().sort({ createdAt: -1 }); // latest first
+    const {
+      status,
+      package: pkg,
+      coverageArea,
+      startDate,
+      endDate,
+    } = req.query;
+
+    const query = {};
+
+    if (status) query.status = status;
+
+    if (pkg && mongoose.Types.ObjectId.isValid(pkg)) {
+      query.packageId = new mongoose.Types.ObjectId(pkg);
+    }
+
+    if (coverageArea) {
+      query.zone = { $regex: coverageArea, $options: "i" }; // partial match
+    }
+
+    const start = startDate
+      ? new Date(startDate)
+      : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const end = endDate
+      ? new Date(endDate)
+      : new Date(
+          new Date().getFullYear(),
+          new Date().getMonth() + 1,
+          0,
+          23,
+          59,
+          59
+        );
+
+    query.createdAt = { $gte: start, $lte: end };
+
+    const requests = await ConnectionRequest.find(query).sort({
+      createdAt: -1,
+    });
     res.json(requests);
   } catch (error) {
     console.error("Error fetching connection requests:", error);
@@ -119,4 +175,56 @@ const getAllConnectionRequests = async (req, res) => {
   }
 };
 
-module.exports = { checkAvailability, createConnectionRequest,getAllConnectionRequests };
+const updateConnectionRequestStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, remarks } = req.body;
+    console.log(req.params);
+    console.log(req.body);
+
+    // Validation
+    const allowedStatus = [
+      "pending",
+      "connected",
+      "cancelled",
+      "currently not possible",
+    ];
+
+    if (!allowedStatus.includes(status)) {
+      return res.status(400).json({ error: "Invalid status value." });
+    }
+
+    // Find and update
+    const updatedRequest = await ConnectionRequest.findByIdAndUpdate(
+      id,
+      {
+        status,
+        remarks: remarks || "",
+      },
+      { new: true }
+    );
+
+    if (!updatedRequest) {
+      return res.status(404).json({ error: "Connection request not found." });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Connection request status updated successfully.",
+      data: updatedRequest,
+    });
+  } catch (error) {
+    console.error("Error updating connection request status:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while updating status.",
+    });
+  }
+};
+
+module.exports = {
+  checkAvailability,
+  createConnectionRequest,
+  getAllConnectionRequests,
+  updateConnectionRequestStatus,
+};
