@@ -6,12 +6,11 @@ const {
   clientDataHandler,
   getAllClients,
   getClientById,
-  deleteClientById
+  deleteClientById,
 } = require("../controller/clientController.js");
 
 // Memory storage for image uploads
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
+const upload = require("../middlewares/upload.js");
 
 router.post(
   "/client-handle",

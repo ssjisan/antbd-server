@@ -5,7 +5,6 @@ const clientSchema = new mongoose.Schema(
     name: { type: String, required: true },
     image: {
       url: String,
-      public_id: String,
     },
   },
   { timestamps: true }
