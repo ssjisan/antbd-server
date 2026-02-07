@@ -1,52 +1,21 @@
 const Area = require("../model/areaModel.js");
 const cloudinary = require("cloudinary").v2;
 require("dotenv").config(); // Load env vars
+const fs = require("fs");
+const path = require("path");
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUD_NAME,
-  api_key: process.env.API_KEY,
-  api_secret: process.env.API_SECRET,
-});
+const storagePath = process.env.STORAGE_PATH || "./uploads";
+const baseUrl = process.env.BASE_URL || "http://localhost:8000";
+const FOLDER = "coverage-area";
 
-// Upload image to Cloudinary
-const uploadLocationImage = async (imageBuffer) => {
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      {
-        folder: "antbd/locations",
-      },
-      (error, result) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve({
-            url: result.secure_url,
-            public_id: result.public_id,
-          });
-        }
-      }
-    );
-    stream.end(imageBuffer);
-  });
-};
+// ----------------------------------------------------------- //
+// ---------------------Create or update area----------------- //
+// ----------------------------------------------------------- //
 
-// Delete image from Cloudinary
-const deleteLocationImage = async (public_id) => {
-  if (!public_id) return;
-  try {
-    await cloudinary.uploader.destroy(public_id);
-  } catch (err) {
-    console.error("Failed to delete image from Cloudinary:", err.message);
-  }
-};
-
-// Create or update area
 const createOrUpdateArea = async (req, res) => {
   try {
     const { areaName, zone, address, polygons, id } = req.body;
     const file = req.file;
-    console.log(req.body);
 
     if (!areaName || !zone || !address || !polygons) {
       return res.status(400).json({
@@ -55,32 +24,29 @@ const createOrUpdateArea = async (req, res) => {
     }
 
     const parsedPolygons = JSON.parse(polygons);
-    let imageData = null;
 
-    // Upload new image if provided
+    // Build file URL if uploaded
+    let imageUrl = null;
     if (file) {
-      const buffer = file.buffer;
-      imageData = await uploadLocationImage(buffer);
+      imageUrl = `${baseUrl}/file-storage/${FOLDER}/${file.filename}`;
     }
 
     if (id) {
       const existing = await Area.findById(id);
       if (!existing) return res.status(404).json({ error: "Area not found" });
 
-      // If new image uploaded, delete the old one
-      if (imageData && existing.coverPhoto?.public_id) {
-        await deleteLocationImage(existing.coverPhoto.public_id);
+      // Delete old image if new uploaded
+      if (file && existing.coverPhoto?.url) {
+        const oldFile = existing.coverPhoto.url.split(`/${FOLDER}/`)[1];
+        const oldPath = path.join(storagePath, FOLDER, oldFile);
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
       }
 
-      // Update fields
       existing.areaName = areaName;
       existing.zone = zone;
       existing.address = address;
       existing.polygons = parsedPolygons;
-
-      if (imageData) {
-        existing.coverPhoto = imageData;
-      }
+      if (imageUrl) existing.coverPhoto = { url: imageUrl };
 
       const updated = await existing.save();
       return res.status(200).json({
@@ -89,13 +55,13 @@ const createOrUpdateArea = async (req, res) => {
       });
     }
 
-    // Else, create new area
+    // Create new area
     const newArea = await Area.create({
       areaName,
       zone,
       address,
       polygons: parsedPolygons,
-      ...(imageData && { coverPhoto: imageData }),
+      ...(imageUrl && { coverPhoto: { url: imageUrl } }),
     });
 
     return res.status(201).json({
@@ -108,7 +74,10 @@ const createOrUpdateArea = async (req, res) => {
   }
 };
 
-// List all areas
+// ----------------------------------------------------------- //
+// ------------------------List of all area------------------- //
+// ----------------------------------------------------------- //
+
 const listAreas = async (req, res) => {
   try {
     const { zoneId } = req.query;
@@ -123,7 +92,10 @@ const listAreas = async (req, res) => {
   }
 };
 
-// Read single area
+// ----------------------------------------------------------- //
+// ------------------------Read area by Id-------------------- //
+// ----------------------------------------------------------- //
+
 const readArea = async (req, res) => {
   try {
     const { areaId } = req.params;
@@ -140,13 +112,19 @@ const readArea = async (req, res) => {
 const deleteArea = async (req, res) => {
   try {
     const { areaId } = req.params;
-    const area = await Area.findByIdAndDelete(areaId);
+
+    const area = await Area.findById(areaId);
     if (!area) return res.status(404).json({ error: "Area not found" });
 
-    // Delete image from Cloudinary if exists
-    if (area.coverPhoto?.public_id) {
-      await deleteLocationImage(area.coverPhoto.public_id);
+    // Delete image file from local storage
+    if (area.coverPhoto?.url) {
+      const fileName = area.coverPhoto.url.split(`/${FOLDER}/`)[1];
+      const filePath = path.join(storagePath, FOLDER, fileName);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     }
+
+    // Delete area from database
+    await Area.findByIdAndDelete(areaId);
 
     res.json({ message: "Area deleted successfully" });
   } catch (err) {

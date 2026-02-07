@@ -4,128 +4,46 @@ const path = require("path");
 const fs = require("fs");
 
 // Add client data with image upload
-// const clientDataHandler = async (req, res) => {
-//   try {
-//     const { id, name } = req.body;
-
-//     if (!name) return res.status(400).json({ error: "Name is required" });
-
-//     const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
-//     if (req.file && !allowedTypes.includes(req.file.mimetype)) {
-//       return res.status(400).json({
-//         error: "Only PNG, JPG, or WEBP image formats are allowed",
-//       });
-//     }
-
-//     if (req.file) {
-//       const fileSizeInBytes = req.file.size;
-//       const oneMB = 1 * 1024 * 1024;
-//       if (fileSizeInBytes > oneMB) {
-//         return res.status(400).json({ error: "Image must be less than 1MB" });
-//       }
-//     }
-
-//     if (id) {
-//       // Update existing client
-//       const client = await Client.findById(id);
-//       if (!client) {
-//         return res.status(404).json({ error: "Client not found" });
-//       }
-
-//       // If new image uploaded, delete old one and upload new one
-//       if (req.file) {
-//         if (client.image?.public_id) {
-//           await deleteClientLogo(client.image.public_id);
-//         }
-//         const imageResult = await uploadClientLogo(req.file.buffer);
-
-//         client.name = name;
-//         client.image = {
-//           url: imageResult.url,
-//           public_id: imageResult.public_id,
-//         };
-//       } else {
-//         // No new image, update only name
-//         client.name = name;
-//       }
-
-//       await client.save();
-
-//       return res.status(200).json({ message: "Client updated", client });
-//     } else {
-//       // Create new client
-//       if (!req.file) {
-//         return res.status(400).json({ error: "Image is required" });
-//       }
-
-//       const imageResult = await uploadClientLogo(req.file.buffer);
-
-//       const client = await Client.create({
-//         name,
-//         image: {
-//           url: imageResult.url,
-//           public_id: imageResult.public_id,
-//         },
-//       });
-
-//       return res.status(201).json({ message: "Client added", client });
-//     }
-//   } catch (error) {
-//     console.error("Client save failed:", error.message);
-//     res.status(500).json({ error: "Server error" });
-//   }
-// };
 
 const clientDataHandler = async (req, res) => {
   try {
     const { id, name } = req.body;
 
-    if (!name) {
-      return res.status(400).json({ error: "Name is required" });
-    }
-
-    if (!req.file && !id) {
+    if (!name) return res.status(400).json({ error: "Name is required" });
+    if (!req.file && !id)
       return res.status(400).json({ error: "Image is required" });
-    }
+
+    const storagePath = process.env.STORAGE_PATH || "./uploads";
+    const baseUrl = process.env.BASE_URL || "http://localhost:8000";
+    const FOLDER = "clients";
 
     // Build public URL
     let imageUrl = null;
     if (req.file) {
-      imageUrl = `${process.env.BASE_URL}/file-storage/${req.file.filename}`;
+      imageUrl = `${baseUrl}/file-storage/${FOLDER}/${req.file.filename}`;
     }
 
-    // UPDATE
     if (id) {
+      // UPDATE
       const client = await Client.findById(id);
-      if (!client) {
-        return res.status(404).json({ error: "Client not found" });
-      }
+      if (!client) return res.status(404).json({ error: "Client not found" });
 
       // delete old image if new uploaded
       if (req.file && client.image?.url) {
         const oldFile = client.image.url.split("/file-storage/")[1];
-        const oldPath = `/var/www/file-storage/${oldFile}`;
-
-        if (fs.existsSync(oldPath)) {
-          fs.unlinkSync(oldPath);
-        }
+        const oldPath = path.join(storagePath, oldFile);
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
       }
 
       client.name = name;
-      if (imageUrl) {
-        client.image.url = imageUrl;
-      }
+      if (imageUrl) client.image.url = imageUrl;
 
       await client.save();
       return res.status(200).json({ message: "Client updated", client });
     }
 
     // CREATE
-    const client = await Client.create({
-      name,
-      image: { url: imageUrl },
-    });
-
+    const client = await Client.create({ name, image: { url: imageUrl } });
     return res.status(201).json({ message: "Client added", client });
   } catch (error) {
     console.error("Client save failed:", error);
@@ -171,12 +89,18 @@ const deleteClientById = async (req, res) => {
       return res.status(404).json({ error: "Client not found" });
     }
 
-    // Delete image from Cloudinary
-    if (client.image?.public_id) {
-      await deleteClientLogo(client.image.public_id);
+    // Delete image file from VPS/local storage
+    if (client.image?.url) {
+      const storagePath = process.env.STORAGE_PATH || "./uploads";
+      const filename = client.image.url.split("/file-storage/")[1];
+      const filePath = path.join(storagePath, filename);
+
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath); // deletes the file
+      }
     }
 
-    // Delete client from MongoDB
+    // Delete client record from MongoDB
     await Client.findByIdAndDelete(id);
 
     res.status(200).json({ message: "Client deleted successfully" });

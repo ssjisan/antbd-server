@@ -15,11 +15,11 @@ const upload = require("../middlewares/upload.js");
 router.post(
   "/client-handle",
   requiredSignIn,
-  upload.single("image"),
+  upload("clients").single("image"),
   clientDataHandler
 );
 router.get("/clients", getAllClients);
 router.get("/client/:id", requiredSignIn, getClientById);
-router.delete("/client-delete/:id", deleteClientById);
+router.delete("/client-delete/:id", requiredSignIn, deleteClientById);
 
 module.exports = router;

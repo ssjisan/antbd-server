@@ -11,6 +11,7 @@ const createUpdatePackage = async (req, res) => {
       connectionType,
       setupCharge,
       popUp,
+      specialPackages,
     } = req.body;
 
     // Manual validations for each required field
@@ -49,7 +50,11 @@ const createUpdatePackage = async (req, res) => {
     if (typeof popUp !== "boolean") {
       return res.status(400).json({ error: "Popup must be true or false" });
     }
-
+    if (typeof specialPackages !== "boolean") {
+      return res
+        .status(400)
+        .json({ error: "SpecialPackages must be true or false" });
+    }
     // If `id` is present → Update
     if (id) {
       const existing = await Package.findById(id);
@@ -64,7 +69,7 @@ const createUpdatePackage = async (req, res) => {
       existing.connectionType = connectionType;
       existing.setupCharge = setupCharge;
       existing.popUp = popUp;
-
+      existing.specialPackages = specialPackages;
       await existing.save();
 
       return res.status(200).json({
@@ -82,6 +87,7 @@ const createUpdatePackage = async (req, res) => {
       connectionType,
       setupCharge,
       popUp,
+      specialPackages,
     });
 
     await newPackage.save();

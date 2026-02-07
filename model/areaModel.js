@@ -20,11 +20,7 @@ const areaSchema = new mongoose.Schema(
     coverPhoto: {
       url: {
         type: String,
-        required: true,
-      },
-      public_id: {
-        type: String,
-        required: true,
+        required: false,
       },
     },
     polygons: [

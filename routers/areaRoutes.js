@@ -6,22 +6,21 @@ const {
   createOrUpdateArea,
   listAreas,
   deleteArea,
-  readArea
+  readArea,
 } = require("../controller/areaController.js");
 
 // Memory storage for image uploads
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
+const upload = require("../middlewares/upload.js");
 
 // Create or update area (image is optional)
 router.post(
   "/save-area",
   requiredSignIn,
-  upload.single("file"),
+  upload("coverage-area").single("file"),
   createOrUpdateArea
 );
 router.get("/areas", listAreas);
 router.delete("/area/:areaId", requiredSignIn, deleteArea);
-router.get("/area/:areaId", readArea); // 👈 Add this
+router.get("/area/:areaId", readArea);
 
 module.exports = router;

@@ -38,6 +38,10 @@ const packageSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    specialPackages: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

@@ -1,24 +1,32 @@
 const multer = require("multer");
 const path = require("path");
-const { v4: uuidv4 } = require("uuid");
+const fs = require("fs");
 
-// Disk storage configuration
-const storage = multer.diskStorage({
-  destination: "/var/www/file-storage", // VPS folder
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `${uuidv4()}${ext}`);
-  },
-});
+const BASE_STORAGE = process.env.STORAGE_PATH || "./uploads";
 
-// File filter & limits
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith("image/")) cb(null, true);
-    else cb(new Error("Only image files allowed"));
-  },
-});
+const createUploader = (subFolder = "") => {
+  const finalPath = path.join(BASE_STORAGE, subFolder);
 
-module.exports = upload;
+  // ensure folder exists
+  if (!fs.existsSync(finalPath)) {
+    fs.mkdirSync(finalPath, { recursive: true });
+  }
+
+  const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, finalPath);
+    },
+    filename: (req, file, cb) => {
+      const uniqueName = Date.now() + "-" + Math.round(Math.random() * 1e9);
+      const ext = path.extname(file.originalname);
+      cb(null, uniqueName + ext);
+    },
+  });
+
+  return multer({
+    storage,
+    limits: { fileSize: 100 * 1024 * 1024 }, // 100MB
+  });
+};
+
+module.exports = createUploader;
