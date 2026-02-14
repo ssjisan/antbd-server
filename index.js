@@ -15,6 +15,8 @@ const dashboardKpiRoutes = require("./routers/dashboardKpiRoutes.js");
 const clientRoutes = require("./routers/clientRoutes.js");
 const membershipRoutes = require("./routers/membershipRoutes.js");
 const contactInfoRoutes = require("./routers/contactInfoRoutes.js");
+const editorImage = require("./routers/editorImage.js");
+const newsRoutes = require("./routers/newsRoutes.js");
 dotenv.config();
 
 const storagePath = process.env.STORAGE_PATH || path.join(__dirname, "uploads");
@@ -43,7 +45,10 @@ app.use(dashboardKpiRoutes);
 app.use(clientRoutes);
 app.use(membershipRoutes);
 app.use(contactInfoRoutes);
+app.use(editorImage);
+app.use(newsRoutes);
 app.use("/file-storage", express.static(storagePath));
+
 // 🔗 Root route
 // Basic Route
 app.get("/", (req, res) => {
