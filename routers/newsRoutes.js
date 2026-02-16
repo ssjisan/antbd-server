@@ -19,7 +19,12 @@ router.post(
 );
 router.get("/all-news", getAllNews);
 router.get("/news/:id", getNewsById);
-router.put("/update-news/:id", updateNews);
+router.put(
+  "/update-news/:id",
+  newsCoverUpload.single("coverPhoto"),
+  requiredSignIn,
+  updateNews,
+);
 router.delete("/delete-news/:id", deleteNews);
 
 module.exports = router;

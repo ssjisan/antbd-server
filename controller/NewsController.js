@@ -158,6 +158,7 @@ exports.updateNews = async (req, res) => {
     if (!title || !contentJSON || !contentHTML) {
       return res.status(400).json({ message: "All fields are required" });
     }
+    console.log(req.body);
 
     const existingNews = await News.findById(id);
     if (!existingNews) {
@@ -165,22 +166,22 @@ exports.updateNews = async (req, res) => {
     }
 
     const newsId = existingNews._id.toString();
-
     const baseStoragePath = path.join(process.cwd(), "uploads");
     const tempFolder = path.join(baseStoragePath, "temp");
     const newsFolder = path.join(baseStoragePath, "news", newsId);
+    const coverFolder = path.join(baseStoragePath, "news", "cover-photos");
 
-    if (!fs.existsSync(newsFolder)) {
+    if (!fs.existsSync(newsFolder))
       fs.mkdirSync(newsFolder, { recursive: true });
-    }
+    if (!fs.existsSync(coverFolder))
+      fs.mkdirSync(coverFolder, { recursive: true });
 
     let updatedHTML = contentHTML;
     let updatedJSON = JSON.parse(JSON.stringify(contentJSON));
-
     const imageUrls = extractImagePaths(contentHTML);
     const movedFiles = [];
 
-    // 🔥 1. Move new temp images
+    // 🔹 1. Move new temp images
     for (const url of imageUrls) {
       if (url.includes("/temp/")) {
         const filename = path.basename(url);
@@ -197,7 +198,7 @@ exports.updateNews = async (req, res) => {
       }
     }
 
-    // 🔥 2. Update JSON URLs
+    // 🔹 2. Update JSON image URLs
     const updateJsonImages = (nodes) => {
       for (let node of nodes) {
         if (node.type === "image" && node.url && node.url.includes("/temp/")) {
@@ -209,31 +210,42 @@ exports.updateNews = async (req, res) => {
     };
     updateJsonImages(updatedJSON);
 
-    // 🔥 3. Delete removed images from disk
+    // 🔹 3. Delete removed editor images from disk
     const existingImages = fs.existsSync(newsFolder)
       ? fs.readdirSync(newsFolder)
       : [];
-
     const currentImageFilenames = imageUrls.map((url) => path.basename(url));
-
     for (const file of existingImages) {
       if (!currentImageFilenames.includes(file)) {
-        const filePath = path.join(newsFolder, file);
-        fs.unlinkSync(filePath);
+        fs.unlinkSync(path.join(newsFolder, file));
       }
     }
 
-    // 🔥 4. Cleanup unused temp uploads
+    // 🔹 4. Cleanup unused temp uploads
     for (const file of uploadedImages) {
       if (!movedFiles.includes(file)) {
         const filePath = path.join(tempFolder, file);
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-        }
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
       }
     }
 
-    // 🔥 5. Save final content
+    // 🔹 5. Handle cover photo replacement
+    if (req.file) {
+      // Delete old cover if exists
+      if (existingNews.coverPhoto) {
+        const oldCoverFilename = path.basename(existingNews.coverPhoto);
+        const oldCoverPath = path.join(coverFolder, oldCoverFilename);
+        if (fs.existsSync(oldCoverPath)) {
+          fs.unlinkSync(oldCoverPath);
+          console.log(`Deleted old cover: ${oldCoverFilename}`);
+        }
+      }
+
+      // Save new cover URL
+      existingNews.coverPhoto = `${process.env.BASE_URL}/file-storage/news/cover-photos/${req.file.filename}`;
+    }
+
+    // 🔹 6. Save final content
     existingNews.title = title;
     existingNews.contentHTML = updatedHTML;
     existingNews.contentJSON = updatedJSON;
