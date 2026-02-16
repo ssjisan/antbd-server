@@ -8,12 +8,16 @@ const NewsSchema = new mongoose.Schema(
       required: true,
     },
     contentJSON: {
-      type: Array, // Slate editor value
+      type: Array,
       required: true,
     },
     contentHTML: {
-      type: String, // serialized HTML
+      type: String,
       required: true,
+    },
+    coverPhoto: {
+      type: String,
+      default: "",
     },
   },
   { timestamps: true },

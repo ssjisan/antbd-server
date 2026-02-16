@@ -16,8 +16,9 @@ router.post(
   "/client-handle",
   requiredSignIn,
   upload("clients").single("image"),
-  clientDataHandler
+  clientDataHandler,
 );
+
 router.get("/clients", getAllClients);
 router.get("/client/:id", requiredSignIn, getClientById);
 router.delete("/client-delete/:id", requiredSignIn, deleteClientById);
