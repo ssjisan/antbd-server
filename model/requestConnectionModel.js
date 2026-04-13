@@ -48,12 +48,12 @@ const requestConnectionSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 const ConnectionRequest = mongoose.model(
   "ConnectionRequest",
-  requestConnectionSchema
+  requestConnectionSchema,
 );
 
 module.exports = ConnectionRequest;

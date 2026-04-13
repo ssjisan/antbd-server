@@ -3,25 +3,53 @@ const router = express.Router();
 
 // import controller
 const {
-  registerUser,
+  registerUserByAdmin,
   loginUser,
-  privateRoute,
   removeUser,
   userList,
   changePassword,
   resetPassword,
+  getSingleUser,
+  updateUser,
 } = require("../controller/authController.js");
 
 // import middleware
-const { requiredSignIn, isAdmin } = require("../middlewares/authMiddleware.js");
+const { requiredSignIn } = require("../middlewares/authMiddleware.js");
+const { checkPermission } = require("../middlewares/checkPermission.js");
 
-router.post("/register", registerUser);
+router.post(
+  "/register",
+  requiredSignIn,
+  checkPermission("users", "canCreate"),
+  registerUserByAdmin,
+);
 router.post("/login", loginUser);
-router.get("/users", requiredSignIn, userList);
-router.delete("/user/:userId", requiredSignIn, isAdmin, removeUser);
-router.get("/private", requiredSignIn, isAdmin, privateRoute);
+router.get(
+  "/users",
+  requiredSignIn,
+  checkPermission("users", "canView"),
+  userList,
+);
+router.get(
+  "/user/:id",
+  requiredSignIn,
+  checkPermission("users", "canView"),
+  getSingleUser,
+);
+router.delete(
+  "/user/:id",
+  requiredSignIn,
+  checkPermission("users", "canDelete"),
+  removeUser,
+);
 router.post("/change-password", requiredSignIn, changePassword);
-router.post("/reset-password/:userId", requiredSignIn, isAdmin, resetPassword);
+router.post("/reset-password/:id", requiredSignIn, resetPassword);
+router.put(
+  "/user/:id",
+  requiredSignIn,
+  checkPermission("users", "canUpdate"),
+  updateUser,
+);
 
 router.get("/auth-check", requiredSignIn, (req, res) => {
   res.json({ ok: true });

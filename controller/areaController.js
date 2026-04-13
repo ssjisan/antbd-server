@@ -1,6 +1,6 @@
 const Area = require("../model/areaModel.js");
 const cloudinary = require("cloudinary").v2;
-require("dotenv").config(); // Load env vars
+require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
 

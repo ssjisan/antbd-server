@@ -7,6 +7,8 @@ const cors = require("cors");
 // Route Imports
 const webMessage = require("./helper/webMessage.js");
 const authRoutes = require("./routers/authRoutes.js");
+const pageRoutes = require("./routers/pageRoutes.js");
+const roleRoutes = require("./routers/roleRoutes.js");
 const areaRoutes = require("./routers/areaRoutes.js");
 const zoneRoutes = require("./routers/zoneRoutes.js");
 const packageRoutes = require("./routers/packageRoutes.js");
@@ -17,6 +19,8 @@ const membershipRoutes = require("./routers/membershipRoutes.js");
 const contactInfoRoutes = require("./routers/contactInfoRoutes.js");
 const editorImage = require("./routers/editorImage.js");
 const newsRoutes = require("./routers/newsRoutes.js");
+const sliderRoutes = require("./routers/sliderRoutes.js");
+const successStoriesRoutes = require("./routers/successStoriesRoutes.js");
 dotenv.config();
 
 const storagePath = process.env.STORAGE_PATH || path.join(__dirname, "uploads");
@@ -37,6 +41,8 @@ app.use(express.json());
 
 // 🛣️ Routers
 app.use(authRoutes);
+app.use(pageRoutes);
+app.use(roleRoutes);
 app.use(areaRoutes);
 app.use(zoneRoutes);
 app.use(packageRoutes);
@@ -47,6 +53,8 @@ app.use(membershipRoutes);
 app.use(contactInfoRoutes);
 app.use(editorImage);
 app.use(newsRoutes);
+app.use(sliderRoutes);
+app.use(successStoriesRoutes);
 app.use("/file-storage", express.static(storagePath));
 
 // 🔗 Root route
