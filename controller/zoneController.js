@@ -43,7 +43,7 @@ exports.updateZone = async (req, res) => {
     const updatedZone = await Zone.findByIdAndUpdate(
       id,
       { name, officeLocation },
-      { new: true }
+      { new: true },
     );
 
     if (!updatedZone) {

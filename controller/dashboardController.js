@@ -238,6 +238,24 @@ const dashboardController = async (req, res) => {
       },
     };
 
+    const topPackagesRaw = await ConnectionRequest.aggregate([
+      {
+        $group: {
+          _id: "$packageId",
+          total: { $sum: 1 },
+        },
+      },
+      { $sort: { total: -1 } },
+      { $limit: 5 },
+    ]);
+
+    const latestPendingRequests = await ConnectionRequest.find({
+      status: "pending",
+    })
+      .sort({ createdAt: -1 }) // latest first
+      .limit(5)
+      .lean();
+
     // =========================
     // FINAL RESPONSE
     // =========================
@@ -247,6 +265,8 @@ const dashboardController = async (req, res) => {
         kpi,
         statusDistribution,
         monthlyTrend,
+        latestPendingRequests,
+        topPackagesRaw,
       },
     });
   } catch (error) {

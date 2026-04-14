@@ -17,7 +17,7 @@ router.post(
   "/save-area",
   requiredSignIn,
   upload("coverage-area").single("file"),
-  createOrUpdateArea
+  createOrUpdateArea,
 );
 router.get("/areas", listAreas);
 router.delete("/area/:areaId", requiredSignIn, deleteArea);

@@ -24,7 +24,7 @@ export const checkPermission = (slug, action = "canView") => {
       if (!perm || !perm[action]) {
         return res.status(403).json({
           success: false,
-          message: "Forbidden: No permission",
+          message: "You don't have permission",
         });
       }
 
