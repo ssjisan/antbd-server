@@ -21,6 +21,9 @@ const editorImage = require("./routers/editorImage.js");
 const newsRoutes = require("./routers/newsRoutes.js");
 const sliderRoutes = require("./routers/sliderRoutes.js");
 const successStoriesRoutes = require("./routers/successStoriesRoutes.js");
+const galleryRoutes = require("./routers/galleryRoutes.js");
+const backupRoutes = require("./routers/backupRoutes.js");
+const mailRoutes = require("./routers/mailRoutes.js");
 dotenv.config();
 
 const storagePath = process.env.STORAGE_PATH || path.join(__dirname, "uploads");
@@ -55,6 +58,9 @@ app.use(editorImage);
 app.use(newsRoutes);
 app.use(sliderRoutes);
 app.use(successStoriesRoutes);
+app.use(galleryRoutes);
+app.use(backupRoutes);
+app.use(mailRoutes);
 app.use("/file-storage", express.static(storagePath));
 
 // 🔗 Root route
