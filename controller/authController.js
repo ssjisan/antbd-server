@@ -1,8 +1,12 @@
 const jwt = require("jsonwebtoken");
 const { comparePassword, hashPassword } = require("../helper/passwordHash.js");
 const UserModel = require("../model/userModel.js");
+const { transporter } = require("../helper/mailer.js");
 const dotenv = require("dotenv");
 const Roles = require("../model/roleModel.js");
+const sendOtpMail = require("../helper/sendOtpMail.js");
+const crypto = require("crypto");
+
 dotenv.config();
 
 // ---------------------------
@@ -592,6 +596,372 @@ const updateUser = async (req, res) => {
   }
 };
 
+const generateOTP = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+const getOtpCooldown = (user) => {
+  if (!user?.otpRequestedAt) return 0;
+
+  const diff = Date.now() - new Date(user.otpRequestedAt).getTime();
+  const remaining = 90 * 1000 - diff;
+
+  return remaining > 0 ? Math.ceil(remaining / 1000) : 0;
+};
+
+const sendForgotPasswordOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await UserModel.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Check cooldown
+    const remaining = getOtpCooldown(user);
+
+    if (remaining > 0) {
+      return res.status(429).json({
+        success: false,
+        message: `Please wait ${remaining} seconds before requesting OTP`,
+        retryAfter: remaining,
+      });
+    }
+
+    const otp = generateOTP();
+    const expiryTime = new Date(Date.now() + 90 * 1000);
+
+    // Save OTP information
+    user.otp = otp;
+    user.expiresAt = expiryTime;
+    user.otpRequestedAt = new Date();
+    user.isUsed = false;
+
+    // Clear previous reset session
+    user.passwordResetVerified = false;
+    user.passwordResetToken = null;
+    user.passwordResetExpires = null;
+
+    await user.save();
+
+    // Send email AFTER saving
+    await transporter.sendMail({
+      from: `"Support" <${process.env.FROM_EMAIL}>`,
+      to: email,
+      subject: "Forgot Password OTP",
+      html: sendOtpMail(otp),
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "OTP sent successfully",
+      expiresAt: expiryTime.getTime(),
+      retryAfter: 90, // frontend countdown
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to send OTP",
+    });
+  }
+};
+
+const verifyForgotPasswordOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    const user = await UserModel.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // OTP exists
+    if (!user.otp) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP not found. Please request again.",
+      });
+    }
+
+    // OTP expired
+    if (user.expiresAt < new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP expired. Please request again.",
+      });
+    }
+
+    // Already used
+    if (user.isUsed) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP already used.",
+      });
+    }
+
+    // OTP match
+    if (String(user.otp) !== String(otp)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid OTP",
+      });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString("hex");
+
+    user.passwordResetVerified = true;
+    user.passwordResetToken = resetToken;
+    user.passwordResetExpires = new Date(Date.now() + 3 * 60 * 1000);
+
+    // Consume OTP
+    user.otp = null;
+    user.expiresAt = null;
+    user.otpRequestedAt = null;
+    user.isUsed = true;
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "OTP verified successfully",
+      resetToken,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "OTP verification failed",
+    });
+  }
+};
+
+const resendForgotPasswordOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await UserModel.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // 🔒 check cooldown
+    const remaining = getOtpCooldown(user);
+
+    if (remaining > 0) {
+      return res.status(429).json({
+        success: false,
+        message: `Please wait ${remaining} seconds before resending OTP`,
+        retryAfter: remaining,
+      });
+    }
+
+    const otp = generateOTP();
+
+    await transporter.sendMail({
+      from: `"Support" <${process.env.FROM_EMAIL}>`,
+      to: email,
+      subject: "Resend OTP",
+      html: sendOtpMail(otp),
+    });
+
+    user.otp = otp;
+    user.expiresAt = new Date(Date.now() + 90 * 1000);
+    user.otpRequestedAt = new Date();
+    user.isUsed = false;
+
+    await user.save();
+
+    return res.json({
+      success: true,
+      message: "OTP resent successfully",
+      retryAfter: 90,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to resend OTP",
+    });
+  }
+};
+
+const resetForgotPassword = async (req, res) => {
+  try {
+    const { email, resetToken, password } = req.body;
+
+    if (!email || !resetToken || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email, reset token and password are required",
+      });
+    }
+
+    const user = await UserModel.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Verify reset token
+    if (!user.passwordResetVerified || user.passwordResetToken !== resetToken) {
+      return res.status(400).json({
+        success: false,
+        sessionExpired: true,
+        message: "Invalid password reset session. Please request a new OTP.",
+      });
+    }
+
+    // Token expired
+    if (!user.passwordResetExpires || user.passwordResetExpires < new Date()) {
+      return res.status(400).json({
+        success: false,
+        sessionExpired: true,
+        message: "Reset session expired. Please request again.",
+      });
+    }
+
+    // Password length
+    if (password.length < 8 || password.length > 16) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be between 8 and 16 characters",
+      });
+    }
+
+    // Password policy
+    const passwordRegex =
+      /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&^#()[\]{}\-_=+|:;"'<>,./~`]).{8,16}$/;
+
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Password must contain at least 1 uppercase letter, 1 number, and 1 special character",
+      });
+    }
+
+    // Common passwords
+    const weakPasswords = [
+      "12345678",
+      "123456789",
+      "password",
+      "password123",
+      "admin123",
+      "qwerty123",
+    ];
+
+    if (weakPasswords.includes(password.toLowerCase())) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "This password is too common. Please choose a stronger password.",
+      });
+    }
+
+    // Cannot reuse current password
+    const sameAsCurrent = await comparePassword(password, user.password);
+
+    if (sameAsCurrent) {
+      return res.status(400).json({
+        success: false,
+        message: "New password cannot be same as current password",
+      });
+    }
+
+    // Name/email validation
+    const lowerPassword = password.toLowerCase();
+
+    const nameParts = user.name
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((part) => part.length >= 3);
+
+    const emailUsername = user.email.toLowerCase().split("@")[0];
+
+    const emailParts = emailUsername
+      .split(/[._-]/)
+      .filter((part) => part.length >= 3);
+
+    const restrictedWords = [...nameParts, emailUsername, ...emailParts];
+
+    for (const word of restrictedWords) {
+      if (lowerPassword.includes(word)) {
+        return res.status(400).json({
+          success: false,
+          message: "Password cannot contain parts of your name or email",
+        });
+      }
+    }
+
+    // Prevent reuse of last 3 passwords
+    for (const oldHash of user.passwordHistory) {
+      const reused = await comparePassword(password, oldHash);
+
+      if (reused) {
+        return res.status(400).json({
+          success: false,
+          message: "You cannot reuse last 3 passwords",
+        });
+      }
+    }
+
+    // Store current password in history
+    if (user.passwordHistory.length >= 3) {
+      user.passwordHistory.shift();
+    }
+
+    user.passwordHistory.push(user.password);
+
+    // Hash new password
+    user.password = await hashPassword(password);
+
+    // Clear reset session
+    user.passwordResetVerified = false;
+    user.passwordResetToken = null;
+    user.passwordResetExpires = null;
+
+    // Security updates
+    user.mustChangePassword = false;
+    user.passwordChangedAt = new Date();
+    user.loginAttempts = 0;
+    user.lockUntil = null;
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Password reset successfully",
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to reset password",
+    });
+  }
+};
+
 module.exports = {
   registerUserByAdmin,
   loginUser,
@@ -601,4 +971,8 @@ module.exports = {
   resetPassword,
   getSingleUser,
   updateUser,
+  sendForgotPasswordOtp,
+  verifyForgotPasswordOtp,
+  resendForgotPasswordOtp,
+  resetForgotPassword,
 };

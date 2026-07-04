@@ -1,6 +1,6 @@
-import { transporter } from "../helper/mailer.js";
+const { transporter } = require("../helper/mailer.js");
 
-export const sendMail = async (req, res) => {
+const sendMail = async (req, res) => {
   try {
     const { to, subject, message } = req.body;
 
@@ -20,13 +20,8 @@ export const sendMail = async (req, res) => {
       `,
     });
 
-    return res.json({
-      success: true,
-      messageId: result.messageId,
-    });
+    return res.json({ success: true, messageId: result.messageId });
   } catch (error) {
-    console.error("Email error:", error);
-
     return res.status(500).json({
       success: false,
       message: "Email sending failed",
@@ -34,3 +29,5 @@ export const sendMail = async (req, res) => {
     });
   }
 };
+
+module.exports = sendMail;

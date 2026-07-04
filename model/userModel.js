@@ -18,7 +18,32 @@ const UserSchema = new mongoose.Schema(
       lowercase: true,
       match: /^\S+@\S+\.\S+$/,
     },
+    otp: {
+      type: String,
+      default: null,
+    },
 
+    expiresAt: {
+      type: Date,
+      default: null,
+    },
+    otpRequestedAt: {
+      type: Date,
+      default: null,
+    },
+    isUsed: {
+      type: Boolean,
+      default: false,
+    },
+    passwordResetToken: {
+      type: String,
+      default: null,
+    },
+
+    passwordResetExpires: {
+      type: Date,
+      default: null,
+    },
     password: {
       type: String,
       required: true,
@@ -62,6 +87,10 @@ const UserSchema = new mongoose.Schema(
     },
     lastLogin: {
       type: Date,
+    },
+    passwordResetVerified: {
+      type: Boolean,
+      default: false,
     },
   },
   {

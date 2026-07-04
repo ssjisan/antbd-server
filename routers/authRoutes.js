@@ -11,6 +11,10 @@ const {
   resetPassword,
   getSingleUser,
   updateUser,
+  sendForgotPasswordOtp,
+  verifyForgotPasswordOtp,
+  resendForgotPasswordOtp,
+  resetForgotPassword,
 } = require("../controller/authController.js");
 
 // import middleware
@@ -51,6 +55,10 @@ router.put(
   updateUser,
 );
 
+router.post("/forgot-password-otp", sendForgotPasswordOtp);
+router.post("/resend-otp", resendForgotPasswordOtp);
+router.post("/verify-otp", verifyForgotPasswordOtp);
+router.post("/reset-forgot-password", resetForgotPassword);
 router.get("/auth-check", requiredSignIn, (req, res) => {
   res.json({ ok: true });
 });
