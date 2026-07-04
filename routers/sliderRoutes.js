@@ -29,7 +29,7 @@ router.post(
 // ---------------------- Get All Sliders --------------------- //
 // ----------------------------------------------------------- //
 
-router.get("/all-sliders", requiredSignIn, listSliders);
+router.get("/all-sliders", listSliders);
 
 // ----------------------------------------------------------- //
 // ---------------------- Get Single Slider ------------------- //
